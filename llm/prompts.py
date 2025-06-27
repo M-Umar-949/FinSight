@@ -6,6 +6,8 @@ CONTEXT:
 - User Query: {query}
 - Market Data: {market_data}
 - News Articles: {news_articles}
+- Conversation History: {conversation_history}
+- Cached Market Data: {cached_data}
 
 TASK: Provide a comprehensive analysis that includes:
 
@@ -34,6 +36,11 @@ TASK: Provide a comprehensive analysis that includes:
    - Potential scenarios and outcomes
    - Important dates or events ahead
 
+6. **Context Continuity**:
+   - Reference previous analysis if relevant
+   - Note any changes from previous assessments
+   - Build on previous insights
+
 FORMAT: Provide a structured response with clear sections and bullet points where appropriate. Be concise but comprehensive."""
 
 COMPANY_NEWS_ANALYSIS_PROMPT = """You are a financial analyst specializing in company news and corporate events analysis. Analyze the provided news and market data to understand company developments.
@@ -42,6 +49,8 @@ CONTEXT:
 - User Query: {query}
 - News Articles: {news_articles}
 - Market Data: {market_data}
+- Conversation History: {conversation_history}
+- Cached Market Data: {cached_data}
 
 TASK: Provide a comprehensive analysis that includes:
 
@@ -70,6 +79,11 @@ TASK: Provide a comprehensive analysis that includes:
    - Key milestones to watch
    - Long-term strategic implications
 
+6. **Context Continuity**:
+   - Reference previous company analysis if relevant
+   - Note any developments from previous assessments
+   - Build on previous insights
+
 FORMAT: Provide a structured response with clear sections and bullet points where appropriate."""
 
 REGULATORY_NEWS_ANALYSIS_PROMPT = """You are a financial analyst specializing in regulatory and compliance analysis. Analyze the provided news and market data to understand regulatory developments.
@@ -78,6 +92,8 @@ CONTEXT:
 - User Query: {query}
 - News Articles: {news_articles}
 - Market Data: {market_data}
+- Conversation History: {conversation_history}
+- Cached Market Data: {cached_data}
 
 TASK: Provide a comprehensive analysis that includes:
 
@@ -111,6 +127,11 @@ TASK: Provide a comprehensive analysis that includes:
    - Compliance priorities
    - Strategic considerations
 
+7. **Context Continuity**:
+   - Reference previous regulatory analysis if relevant
+   - Note any policy changes from previous assessments
+   - Build on previous insights
+
 FORMAT: Provide a structured response with clear sections and bullet points where appropriate."""
 
 VIDEO_ANALYSIS_PROMPT = """You are a financial analyst specializing in video content analysis. Analyze the provided video transcription and context to extract financial insights.
@@ -119,6 +140,8 @@ CONTEXT:
 - User Query: {query}
 - Video Content: {video_content}
 - Market Context: {market_context}
+- Conversation History: {conversation_history}
+- Cached Market Data: {cached_data}
 
 TASK: Provide a comprehensive analysis that includes:
 
@@ -147,11 +170,37 @@ TASK: Provide a comprehensive analysis that includes:
    - Important dates or events mentioned
    - Follow-up actions to consider
 
+6. **Context Continuity**:
+   - Reference previous video analysis if relevant
+   - Note any changes from previous assessments
+   - Build on previous insights
+
 FORMAT: Provide a structured response with clear sections and bullet points where appropriate."""
+
+CONTEXT_ENHANCED_GENERAL_PROMPT = """You are FinSight, a helpful and knowledgeable financial analysis AI assistant. 
+Provide accurate, concise, and helpful responses to general financial questions.
+
+CONTEXT:
+- User Query: {query}
+- Conversation History: {conversation_history}
+- Cached Market Data: {cached_data}
+
+INSTRUCTIONS:
+- Be friendly, professional, and encourage users to ask specific questions
+- Reference previous conversation context when relevant
+- Use cached market data if available and relevant
+- Encourage users to ask about:
+  - Price movements and market analysis
+  - Company news and corporate events
+  - Regulatory developments and compliance
+  - Video content analysis
+
+Keep responses informative but concise."""
 
 NEWS_SENTIMENT_ANALYSIS_PROMPT = """Analyze the sentiment and impact of financial news articles.
 
 ARTICLES: {articles}
+CONVERSATION CONTEXT: {conversation_history}
 
 Provide analysis covering:
 1. Overall sentiment (bullish/bearish/neutral)
@@ -159,6 +208,7 @@ Provide analysis covering:
 3. Potential market impact
 4. Credibility and source quality
 5. Timing and urgency of information
+6. Context from previous analysis
 
 Return as structured analysis with clear sections."""
 
@@ -166,6 +216,7 @@ TECHNICAL_ANALYSIS_PROMPT = """Provide technical analysis based on price data an
 
 PRICE DATA: {price_data}
 MARKET INDICATORS: {market_indicators}
+CONVERSATION CONTEXT: {conversation_history}
 
 Analyze:
 1. Price trends and patterns
@@ -173,12 +224,16 @@ Analyze:
 3. Volume analysis
 4. Momentum indicators
 5. Market breadth and sentiment
-6. Technical outlook and key levels to watch"""
+6. Technical outlook and key levels to watch
+7. Changes from previous analysis
+
+FORMAT: Provide structured analysis with clear sections."""
 
 FUNDAMENTAL_ANALYSIS_PROMPT = """Analyze fundamental factors affecting price movements.
 
 NEWS CONTEXT: {news_context}
 MARKET DATA: {market_data}
+CONVERSATION CONTEXT: {conversation_history}
 
 Focus on:
 1. Earnings and financial performance
@@ -186,7 +241,10 @@ Focus on:
 3. Regulatory and policy impacts
 4. Economic factors
 5. Company-specific events
-6. Valuation considerations"""
+6. Valuation considerations
+7. Changes from previous fundamental analysis
+
+FORMAT: Provide structured analysis with clear sections."""
 
 CRYPTO_PRICE_ANALYSIS_PROMPT = """Analyze cryptocurrency price movements and market dynamics.
 

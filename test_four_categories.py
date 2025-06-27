@@ -42,12 +42,18 @@ async def test_all_categories():
             "Video analysis of earnings call",
             "YouTube content about crypto regulations",
             "Video about company merger news"
+        ],
+        "general_query": [
+            "Hello!",
+            "What can you do?",
+            "Help me understand the stock market",
+            "How do I analyze crypto prices?"
         ]
     }
     
     print("🚀 FinSight Four-Category Analysis Test Suite")
     print("=" * 70)
-    print("Testing: Price Movement | Company News | Regulatory News | Video Analysis")
+    print("Testing: Price Movement | Company News | Regulatory News | Video Analysis | General Queries")
     print("Each category includes integrated sentiment analysis")
     print("=" * 70)
     
@@ -86,6 +92,8 @@ def display_category_results(category: str, result: dict):
         display_regulatory_news_results(result)
     elif category == "video_analysis":
         display_video_analysis_results(result)
+    elif category == "general_query":
+        display_general_query_results(result)
 
 def display_price_movement_results(result: dict):
     """Display price movement analysis results"""
@@ -156,6 +164,11 @@ def display_video_analysis_results(result: dict):
         print(f"📹 Content: {video_info.get('content_length', 'N/A')} chars")
         print(f"📹 Preview: {video_info.get('content_preview', 'N/A')[:100]}...")
 
+def display_general_query_results(result: dict):
+    """Display general query results"""
+    print(f"💬 Response: {result.get('response', 'No response available')}")
+    print(f"📝 Query Type: {result.get('query_type', 'unknown')}")
+
 async def test_sentiment_integration():
     """Test sentiment analysis integration across all categories"""
     finsight = FinSight()
@@ -168,7 +181,8 @@ async def test_sentiment_integration():
         ("price_movement", "Why is the market so bearish today?"),
         ("company_news", "What's the sentiment around Apple's latest earnings?"),
         ("regulatory_news", "How are investors reacting to new crypto regulations?"),
-        ("video_analysis", "Analyze the sentiment in this market analysis video")
+        ("video_analysis", "Analyze the sentiment in this market analysis video"),
+        ("general_query", "What's the current market sentiment?")
     ]
     
     for category, query in sentiment_tests:
@@ -208,7 +222,8 @@ async def detailed_category_test():
         ("price_movement", "Why is Tesla TSLA stock dropping today?"),
         ("company_news", "Apple AAPL earnings announcement and market impact"),
         ("regulatory_news", "SEC new regulations for cryptocurrency trading"),
-        ("video_analysis", "Analyze this YouTube video about market trends")
+        ("video_analysis", "Analyze this YouTube video about market trends"),
+        ("general_query", "Hello! How can you help me with financial analysis?")
     ]
     
     for category, query in detailed_tests:

@@ -4,24 +4,55 @@ An intelligent, agentic web-based pipeline for fintech news and analysis with mo
 
 ## 🎯 Features
 
-### ✅ Implemented
-- **Intent Detection**: Advanced LLM-powered query classification
-- **Modular Tool Architecture**: Extensible tool system
-- **Web UI**: Beautiful Streamlit interface
-- **LLM Integration**: Ollama-based language model
-- **Placeholder Tools**: Ready-to-implement tool placeholders
+### 🎯 Four Core Analysis Categories
 
-### 🔧 Available Intent Categories
-- 💰 **Price Movement**: Market price analysis
-- 📋 **Regulatory News**: SEC, CFTC, compliance updates
-- 🏢 **Company Events**: Earnings, announcements, corporate news
-- 📈 **Market Sentiment**: Fear/greed, investor sentiment
-- 🎥 **Video Transcription**: YouTube analysis, audio transcription
-- 📰 **News Summary**: Aggregated news summaries
-- 📊 **Technical Analysis**: Charts, indicators, patterns
-- 📋 **Fundamental Analysis**: Financial statements, ratios
-- ₿ **Crypto Specific**: DeFi, blockchain, cryptocurrency
-- ℹ️ **General Info**: General financial information
+1. **Price Movement Analysis** 📈
+   - Real-time market data fetching
+   - Technical and fundamental analysis
+   - Price trend identification
+   - Support/resistance levels
+   - Market sentiment integration
+
+2. **Company News Analysis** 📰
+   - Latest company news aggregation
+   - Earnings reports and financial updates
+   - Corporate announcements
+   - Market impact assessment
+   - Sentiment analysis
+
+3. **Regulatory News Analysis** ⚖️
+   - Regulatory updates and policy changes
+   - Compliance news
+   - Government announcements
+   - Industry regulation impact
+   - Legal framework analysis
+
+4. **Video Analysis** 🎥
+   - **Video transcription** using multiple APIs (YouTube, AssemblyAI, OpenAI)
+   - YouTube video metadata extraction
+   - Transcript analysis and summarization
+   - Key points extraction
+   - Sentiment analysis of video content
+   - Market context integration
+
+### 🔧 Additional Features
+
+- **Context-Aware Conversations** 💬
+  - Maintains conversation history
+  - Caches market data for efficiency
+  - Context-aware analysis and responses
+
+- **General Query Handling** 🤖
+  - Greetings and help commands
+  - General financial questions
+  - Domain-specific assistance
+
+- **Multi-API Integration** 🔌
+  - Alpha Vantage for market data
+  - YouTube Data API for video info
+  - AssemblyAI for transcription
+  - OpenAI Whisper for audio processing
+  - News APIs for content aggregation
 
 ## 🛠️ Installation
 

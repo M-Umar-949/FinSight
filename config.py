@@ -49,3 +49,17 @@ class Config:
     MIN_NEWS_ARTICLES = 2  # Minimum articles needed for analysis
     PRICE_DATA_TIMEOUT = 10  # seconds timeout for price data
     NEWS_FETCH_TIMEOUT = 15  # seconds timeout for news fetching
+    
+    # Context Management Settings
+    MAX_CONVERSATION_HISTORY = int(os.getenv('MAX_CONVERSATION_HISTORY', 10))
+    CONTEXT_TTL = int(os.getenv('CONTEXT_TTL', 3600))  # 1 hour
+    CACHE_MARKET_DATA = os.getenv('CACHE_MARKET_DATA', 'true').lower() == 'true'
+    ENABLE_CONTEXT_ANALYSIS = os.getenv('ENABLE_CONTEXT_ANALYSIS', 'true').lower() == 'true'
+    
+    # Video Transcription Settings
+    YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY', '')
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+    ASSEMBLYAI_API_KEY = os.getenv('ASSEMBLYAI_API_KEY', '')
+    ENABLE_VIDEO_TRANSCRIPTION = os.getenv('ENABLE_VIDEO_TRANSCRIPTION', 'true').lower() == 'true'
+    MAX_TRANSCRIPT_LENGTH = int(os.getenv('MAX_TRANSCRIPT_LENGTH', 5000))  # words
+    TRANSCRIPTION_TIMEOUT = int(os.getenv('TRANSCRIPTION_TIMEOUT', 300))  # 5 minutes

@@ -9,6 +9,7 @@ from .prompts import (
     COMPANY_NEWS_ANALYSIS_PROMPT,
     REGULATORY_NEWS_ANALYSIS_PROMPT,
     VIDEO_ANALYSIS_PROMPT,
+    CONTEXT_ENHANCED_GENERAL_PROMPT,
     NEWS_SENTIMENT_ANALYSIS_PROMPT,
     TECHNICAL_ANALYSIS_PROMPT,
     FUNDAMENTAL_ANALYSIS_PROMPT,
@@ -56,26 +57,127 @@ class OllamaClient:
         - company_news: Questions about earnings, announcements, corporate events, IPO, company performance, business news
         - regulatory_news: Questions about regulations, compliance, legal changes, SEC, CFTC, government policy, regulatory updates
         - video_analysis: Requests for video analysis, YouTube links, transcriptions, video content analysis
+        - general_query: Greetings, general questions, help requests, capabilities questions, non-financial queries
         
         Respond with only the category name."""
         
         result = self.generate(query, system_prompt)
         if "error" in result:
-            return "price_movement"  # fallback to most common intent
+            return "general_query"  # fallback to general query
         
-        return result.get("response", "price_movement").strip().lower()
+        return result.get("response", "general_query").strip().lower()
     
-    def analyze_price_movement(self, query: str, market_data: Dict[str, Any], news_articles: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Comprehensive price movement analysis using LLM"""
+    def handle_general_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Handle general queries, greetings, and help requests with context"""
+        # Check for greetings and basic interactions
+        greetings = ["hello", "hi", "hey", "good morning", "good afternoon", "good evening", "greetings"]
+        help_words = ["help", "what can you do", "capabilities", "features", "how to use"]
+        
+        query_lower = query.lower()
+        
+        # Greeting responses
+        if any(greeting in query_lower for greeting in greetings):
+            response = """Hello! I'm FinSight, your AI-powered financial analysis assistant. 
+
+I can help you with:
+📊 **Price Movement Analysis** - Analyze stock/crypto price changes and market movements
+🏢 **Company News Analysis** - Corporate events, earnings, and business developments  
+⚖️ **Regulatory News Analysis** - Government policies, compliance, and regulations
+🎥 **Video Analysis** - Video content analysis and transcription
+
+Just ask me anything about financial markets, companies, regulations, or video content!"""
+            
+            return {
+                "response": response,
+                "intent": "general_query",
+                "query_type": "greeting"
+            }
+        
+        # Help responses
+        elif any(help_word in query_lower for help_word in help_words):
+            response = """I'm FinSight, your comprehensive financial analysis AI assistant!
+
+**What I can do:**
+
+📊 **Price Movement Analysis**
+- "Why is AAPL stock dropping today?"
+- "What's happening with Tesla TSLA price movement?"
+- "Bitcoin BTC price analysis and market sentiment"
+
+🏢 **Company News Analysis**
+- "Apple AAPL earnings announcement analysis"
+- "Tesla TSLA new product launch"
+- "Microsoft MSFT acquisition news"
+
+⚖️ **Regulatory News Analysis**
+- "SEC new regulations for crypto"
+- "CFTC trading rules update"
+- "Federal Reserve policy changes"
+
+🎥 **Video Analysis**
+- "Analyze this YouTube video about market trends"
+- "Video analysis of earnings call"
+- "YouTube content about crypto regulations"
+
+**Features:**
+- Real-time market data and news
+- AI-powered sentiment analysis
+- Comprehensive financial insights
+- Multi-source data aggregation
+- Context-aware conversations
+
+Just ask me anything about finance, and I'll provide detailed analysis with market context!"""
+            
+            return {
+                "response": response,
+                "intent": "general_query",
+                "query_type": "help"
+            }
+        
+        # General financial questions with context
+        else:
+            # Format context information
+            conversation_history = self._format_conversation_history(context.get("conversation_history", []) if context else [])
+            cached_data = self._format_cached_data(context.get("cached_market_data", {}) if context else {})
+            
+            # Use context-enhanced prompt
+            system_prompt = CONTEXT_ENHANCED_GENERAL_PROMPT.format(
+                query=query,
+                conversation_history=conversation_history,
+                cached_data=cached_data
+            )
+            
+            result = self.generate(query, system_prompt)
+            if "error" in result:
+                return {
+                    "response": "I'm here to help with financial analysis! You can ask me about price movements, company news, regulations, or video content. What would you like to know?",
+                    "intent": "general_query",
+                    "query_type": "general"
+                }
+            
+            return {
+                "response": result.get("response", "I'm here to help with financial analysis! What would you like to know?"),
+                "intent": "general_query",
+                "query_type": "general"
+            }
+    
+    def analyze_price_movement(self, query: str, market_data: Dict[str, Any], news_articles: List[Dict[str, Any]], context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Comprehensive price movement analysis using LLM with context"""
         # Format market data for analysis
         market_summary = self._format_market_data(market_data)
         news_summary = self._format_news_articles(news_articles)
+        
+        # Format context information
+        conversation_history = self._format_conversation_history(context.get("conversation_history", []) if context else [])
+        cached_data = self._format_cached_data(context.get("cached_market_data", {}) if context else {})
         
         # Generate comprehensive analysis
         analysis_prompt = PRICE_MOVEMENT_ANALYSIS_PROMPT.format(
             query=query,
             market_data=market_summary,
-            news_articles=news_summary
+            news_articles=news_summary,
+            conversation_history=conversation_history,
+            cached_data=cached_data
         )
         
         result = self.generate(analysis_prompt)
@@ -90,18 +192,25 @@ class OllamaClient:
             "insights": insights,
             "market_data": market_data,
             "news_count": len(news_articles),
-            "symbols_analyzed": market_data.get("extracted_symbols", [])
+            "symbols_analyzed": market_data.get("extracted_symbols", []),
+            "context_used": bool(context)
         }
     
-    def analyze_company_news(self, query: str, news_articles: List[Dict[str, Any]], market_data: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Analyze company news and corporate events"""
+    def analyze_company_news(self, query: str, news_articles: List[Dict[str, Any]], market_data: Dict[str, Any] = None, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Analyze company news and corporate events with context"""
         news_summary = self._format_news_articles(news_articles)
         market_summary = self._format_market_data(market_data) if market_data else "No market data available"
+        
+        # Format context information
+        conversation_history = self._format_conversation_history(context.get("conversation_history", []) if context else [])
+        cached_data = self._format_cached_data(context.get("cached_market_data", {}) if context else {})
         
         analysis_prompt = COMPANY_NEWS_ANALYSIS_PROMPT.format(
             query=query,
             news_articles=news_summary,
-            market_data=market_summary
+            market_data=market_summary,
+            conversation_history=conversation_history,
+            cached_data=cached_data
         )
         
         result = self.generate(analysis_prompt)
@@ -115,18 +224,25 @@ class OllamaClient:
             "analysis": result.get("response", "Analysis unavailable"),
             "insights": insights,
             "news_count": len(news_articles),
-            "market_data": market_data
+            "market_data": market_data,
+            "context_used": bool(context)
         }
     
-    def analyze_regulatory_news(self, query: str, news_articles: List[Dict[str, Any]], market_data: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Analyze regulatory news and compliance developments"""
+    def analyze_regulatory_news(self, query: str, news_articles: List[Dict[str, Any]], market_data: Dict[str, Any] = None, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Analyze regulatory news and compliance developments with context"""
         news_summary = self._format_news_articles(news_articles)
         market_summary = self._format_market_data(market_data) if market_data else "No market data available"
+        
+        # Format context information
+        conversation_history = self._format_conversation_history(context.get("conversation_history", []) if context else [])
+        cached_data = self._format_cached_data(context.get("cached_market_data", {}) if context else {})
         
         analysis_prompt = REGULATORY_NEWS_ANALYSIS_PROMPT.format(
             query=query,
             news_articles=news_summary,
-            market_data=market_summary
+            market_data=market_summary,
+            conversation_history=conversation_history,
+            cached_data=cached_data
         )
         
         result = self.generate(analysis_prompt)
@@ -140,15 +256,22 @@ class OllamaClient:
             "analysis": result.get("response", "Analysis unavailable"),
             "insights": insights,
             "news_count": len(news_articles),
-            "market_data": market_data
+            "market_data": market_data,
+            "context_used": bool(context)
         }
     
-    def analyze_video_content(self, query: str, video_content: str, market_context: str = "") -> Dict[str, Any]:
-        """Analyze video content and transcriptions"""
+    def analyze_video_content(self, query: str, video_content: str, market_context: str = "", context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Analyze video content and transcriptions with context"""
+        # Format context information
+        conversation_history = self._format_conversation_history(context.get("conversation_history", []) if context else [])
+        cached_data = self._format_cached_data(context.get("cached_market_data", {}) if context else {})
+        
         analysis_prompt = VIDEO_ANALYSIS_PROMPT.format(
             query=query,
             video_content=video_content,
-            market_context=market_context
+            market_context=market_context,
+            conversation_history=conversation_history,
+            cached_data=cached_data
         )
         
         result = self.generate(analysis_prompt)
@@ -161,7 +284,8 @@ class OllamaClient:
         return {
             "analysis": result.get("response", "Analysis unavailable"),
             "insights": insights,
-            "content_length": len(video_content)
+            "content_length": len(video_content),
+            "context_used": bool(context)
         }
     
     def analyze_news_sentiment(self, articles: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -375,3 +499,35 @@ class OllamaClient:
             return any(model["name"] == self.model for model in models)
         except:
             return False
+    
+    def _format_conversation_history(self, history: List[Dict[str, Any]]) -> str:
+        """Format conversation history for LLM context"""
+        if not history:
+            return "No previous conversation context available."
+        
+        formatted = []
+        for turn in history[-3:]:  # Last 3 turns
+            formatted.append(f"Previous Q: {turn.get('user_query', 'N/A')}")
+            formatted.append(f"Intent: {turn.get('intent', 'N/A')}")
+            formatted.append(f"Response: {turn.get('response_summary', 'N/A')}")
+            formatted.append("")
+        
+        return "\n".join(formatted) if formatted else "No previous conversation context available."
+    
+    def _format_cached_data(self, cached_data: Dict[str, Any]) -> str:
+        """Format cached market data for LLM context"""
+        if not cached_data:
+            return "No cached market data available."
+        
+        formatted = []
+        for symbol, data in cached_data.items():
+            if isinstance(data, dict) and "data" in data:
+                market_data = data["data"]
+                formatted.append(f"Cached data for {symbol}:")
+                if "price_data" in market_data:
+                    for sym, price_info in market_data["price_data"].items():
+                        if "error" not in price_info:
+                            formatted.append(f"  {sym}: ${price_info.get('price', 'N/A')} ({price_info.get('change_percent', 'N/A')})")
+                formatted.append("")
+        
+        return "\n".join(formatted) if formatted else "No cached market data available."
