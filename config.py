@@ -10,11 +10,14 @@ class Config:
     OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
     
     # API Keys for Market Data
-    ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', 'demo')
-    YAHOO_FINANCE_API_KEY = os.getenv('YAHOO_FINANCE_API_KEY', '')
+    ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', '')
+    NEWS_API_KEY = os.getenv('NEWS_API_KEY', '')
+    ENABLE_MARKET_DATA = os.getenv('ENABLE_MARKET_DATA', 'true').lower() == 'true'
+    MAX_NEWS_ARTICLES = int(os.getenv('MAX_NEWS_ARTICLES', 5))
     
     # Cache Settings
-    CACHE_TTL = int(os.getenv('CACHE_TTL', 7200))  # 2 hours
+    CACHE_ENABLED = os.getenv('CACHE_ENABLED', 'true').lower() == 'true'
+    CACHE_TTL = int(os.getenv('CACHE_TTL', 300))  # 5 minutes
     
     # News Sources
     NEWS_SOURCES = [
@@ -29,16 +32,12 @@ class Config:
     REQUEST_DELAY = 1  # seconds between requests
     
     # Analysis Settings
-    MAX_NEWS_ARTICLES = int(os.getenv('MAX_NEWS_ARTICLES', 8))
     MAX_SYMBOLS_ANALYZED = int(os.getenv('MAX_SYMBOLS_ANALYZED', 3))
+    ENABLE_SENTIMENT_ANALYSIS = os.getenv('ENABLE_SENTIMENT_ANALYSIS', 'true').lower() == 'true'
     
     # Market Indicators to track
     MARKET_INDICATORS = [
-        '^VIX',      # Volatility Index
-        '^GSPC',     # S&P 500
-        '^DJI',      # Dow Jones
-        '^IXIC',     # NASDAQ
-        '^RUT'       # Russell 2000
+        'VIX', 'SPY', 'QQQ', 'IWM', 'TLT', 'GLD', 'USO', 'UUP'
     ]
     
     # LLM Analysis Settings

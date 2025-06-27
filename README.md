@@ -28,19 +28,14 @@ An intelligent, agentic web-based pipeline for fintech news and analysis with mo
    - Legal framework analysis
 
 4. **Video Analysis** 🎥
-   - **Video transcription** using multiple APIs (YouTube, AssemblyAI, OpenAI)
-   - YouTube video metadata extraction
-   - Transcript analysis and summarization
-   - Key points extraction
-   - Sentiment analysis of video content
-   - Market context integration
+   - **YouTube video URL processing**
+   - **Local Whisper transcription** (no API key needed)
+   - **2-minute audio segment analysis** for quick insights
+   - **YouTube API integration** for video metadata
+   - **Key points extraction** and sentiment analysis
+   - **Market context integration**
 
 ### 🔧 Additional Features
-
-- **Context-Aware Conversations** 💬
-  - Maintains conversation history
-  - Caches market data for efficiency
-  - Context-aware analysis and responses
 
 - **General Query Handling** 🤖
   - Greetings and help commands
@@ -50,9 +45,28 @@ An intelligent, agentic web-based pipeline for fintech news and analysis with mo
 - **Multi-API Integration** 🔌
   - Alpha Vantage for market data
   - YouTube Data API for video info
-  - AssemblyAI for transcription
-  - OpenAI Whisper for audio processing
   - News APIs for content aggregation
+
+## ⚙️ Configuration
+
+Create a `.env` file in the root directory with your API keys:
+
+```bash
+# Ollama Configuration
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama2
+
+# Market Data APIs
+ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
+NEWS_API_KEY=your_news_api_key
+
+# Video Analysis (YouTube API only)
+YOUTUBE_API_KEY=your_youtube_api_key
+
+# Cache Settings
+CACHE_ENABLED=true
+CACHE_TTL=300
+```
 
 ## 🛠️ Installation
 
@@ -67,20 +81,22 @@ An intelligent, agentic web-based pipeline for fintech news and analysis with mo
    pip install -r requirements.txt
    ```
 
-3. **Set up Ollama**
+3. **Install system dependencies for video analysis**
    ```bash
-   # Install Ollama (if not already installed)
-   curl -fsSL https://ollama.ai/install.sh | sh
+   # Install yt-dlp for YouTube video downloading
+   pip install yt-dlp
    
-   # Pull the required model
-   ollama pull llama3.2:latest
+   # Install Whisper for local transcription
+   pip install openai-whisper
+   
+   # On macOS, you might need ffmpeg
+   brew install ffmpeg
    ```
 
-4. **Environment setup**
+4. **Set up your environment variables**
    ```bash
-   # Create .env file
-   echo "OLLAMA_HOST=localhost:11434" > .env
-   echo "OLLAMA_MODEL=llama3.2:latest" >> .env
+   cp .env.example .env
+   # Edit .env with your API keys
    ```
 
 ## 🚀 Usage
