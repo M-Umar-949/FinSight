@@ -5,3 +5,6 @@
 # from .video_transcriber import VideoTranscriber
 
 # __all__ = ['NewsScraper', 'SentimentAnalyzer', 'ContentSummarizer', 'VideoTranscriber']
+
+# tools/__init__.py
+# Active tools in the FinSight system
