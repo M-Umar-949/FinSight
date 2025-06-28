@@ -9,6 +9,11 @@ class Config:
     OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'localhost:11434')
     OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
     
+    # MongoDB Settings
+    MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017')
+    MONGODB_DATABASE = os.getenv('MONGODB_DATABASE', 'finsight')
+    MONGODB_CACHE_COLLECTION = os.getenv('MONGODB_CACHE_COLLECTION', 'query_cache')
+    
     # API Keys for Market Data
     ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', '')
     NEWS_API_KEY = os.getenv('NEWS_API_KEY', '')

@@ -3,6 +3,7 @@ from llm.ollama_client import OllamaClient
 from config import Config
 from tools.scraper import get_comprehensive_market_data
 from tools.video_transcriber import VideoTranscriber
+from tools.cache import QueryCache
 from datetime import datetime
 import re
 from typing import Dict, Any
@@ -12,28 +13,44 @@ class FinSight:
         self.llm = OllamaClient()
         self.config = Config()
         self.video_transcriber = VideoTranscriber()
+        self.cache = QueryCache()
     
     async def process_query(self, query: str) -> dict:
-        """Process a single query without context"""
+        """Process a single query with caching"""
         print(f"🔍 Processing query: {query}")
         
         # Detect intent
         intent = self.llm.detect_intent(query)
         print(f"🎯 Detected intent: {intent}")
         
+        # Check cache first
+        cached_response = self.cache.get_cached_response(query, intent)
+        if cached_response:
+            print("💾 Returning cached response")
+            return cached_response
+        
+        # If not in cache, process normally
+        print("🔄 Processing with LLM (cache miss)")
+        
         # Route to appropriate handler
         if intent == "price_movement":
-            return await self._handle_price_query(query)
+            response = await self._handle_price_query(query)
         elif intent == "company_news":
-            return await self._handle_company_news_query(query)
+            response = await self._handle_company_news_query(query)
         elif intent == "regulatory_news":
-            return await self._handle_regulatory_news_query(query)
+            response = await self._handle_regulatory_news_query(query)
         elif intent == "video_analysis":
-            return await self._handle_video_query(query)
-        elif intent == "general":
-            return await self._handle_general_query(query)
+            response = await self._handle_video_query(query)
+        elif intent == "general_query":
+            response = await self._handle_general_query(query)
         else:
-            return {"error": f"Unknown intent: {intent}"}
+            response = {"error": f"Unknown intent: {intent}"}
+        
+        # Cache the response if successful
+        if "error" not in response:
+            self.cache.cache_response(query, intent, response)
+        
+        return response
     
     async def _handle_price_query(self, query: str) -> dict:
         """Enhanced price movement analysis with comprehensive data and LLM insights"""
@@ -266,6 +283,11 @@ class FinSight:
     async def _handle_general_query(self, query: str) -> dict:
         """Handle general queries, greetings, and help requests"""
         return self.llm.handle_general_query(query, None)
+    
+    def cleanup(self):
+        """Cleanup resources"""
+        if hasattr(self, 'cache'):
+            self.cache.close()
 
 # CLI Test Interface
 async def main():
@@ -279,6 +301,7 @@ async def main():
         
         if query.lower() in ['quit', 'exit', 'bye']:
             print("👋 Goodbye!")
+            finsight.cleanup()
             break
         elif query.lower() in ['help', '?']:
             print("🤖 FinSight AI Assistant - Available Commands:")
@@ -287,7 +310,34 @@ async def main():
             print("  • Regulatory updates: 'What are the latest SEC regulations?'")
             print("  • Video analysis: 'Analyze this video: [YouTube URL]'")
             print("  • General questions: 'Hello', 'How are you?'")
+            print("  • Cache commands: 'cache stats', 'clear cache'")
             print("  • Commands: 'help', 'quit'")
+            continue
+        elif query.lower() == 'cache stats':
+            stats = finsight.cache.get_cache_stats()
+            if "error" in stats:
+                print(f"❌ Cache Error: {stats['error']}")
+            else:
+                print("📊 Cache Statistics:")
+                print(f"  Total entries: {stats['total_entries']}")
+                print(f"  Cache TTL: {stats['cache_ttl_seconds']} seconds")
+                if stats['intent_distribution']:
+                    print("  Intent distribution:")
+                    for intent, count in stats['intent_distribution'].items():
+                        print(f"    {intent}: {count}")
+                if stats['oldest_entry']:
+                    print(f"  Oldest entry: {stats['oldest_entry']}")
+                if stats['newest_entry']:
+                    print(f"  Newest entry: {stats['newest_entry']}")
+            continue
+        elif query.lower() == 'clear cache':
+            try:
+                hours = input("Enter hours to clear (default 24): ").strip()
+                hours = int(hours) if hours.isdigit() else 24
+                cleared = finsight.cache.clear_cache(hours)
+                print(f"🗑️ Cleared {cleared} cache entries older than {hours} hours")
+            except ValueError:
+                print("❌ Invalid input. Please enter a number.")
             continue
         
         if not query.strip():
@@ -380,7 +430,7 @@ async def main():
                 market_context = result.get('market_context')
                 if market_context and "error" not in market_context:
                     print(f"🌐 Market Context: Available")
-            elif result.get('intent') == 'general':
+            elif result.get('intent') == 'general_query':
                 # Display general query responses
                 print(f"💬 {result.get('response', 'No response available')}")
             else:

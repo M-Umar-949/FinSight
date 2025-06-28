@@ -56,6 +56,11 @@ Create a `.env` file in the root directory with your API keys:
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama2
 
+# MongoDB Configuration (Required for caching)
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DATABASE=finsight
+MONGODB_CACHE_COLLECTION=query_cache
+
 # Market Data APIs
 ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
 NEWS_API_KEY=your_news_api_key
@@ -66,6 +71,48 @@ YOUTUBE_API_KEY=your_youtube_api_key
 # Cache Settings
 CACHE_ENABLED=true
 CACHE_TTL=300
+```
+
+## 💾 Caching System
+
+FinSight includes a robust MongoDB-based caching system that significantly improves response times and reduces API calls.
+
+### Features
+- **Query-based caching**: Each unique query + intent combination is cached
+- **TTL-based expiration**: Automatic cache cleanup based on configurable time-to-live
+- **Intent-aware**: Different intents for the same query are cached separately
+- **Performance optimization**: Indexed queries for fast retrieval
+- **Cache statistics**: Monitor cache usage and performance
+
+### How it Works
+1. **Query Processing**: When a query is received, the system first checks the cache
+2. **Cache Hit**: If found and not expired, returns cached response immediately
+3. **Cache Miss**: If not found, processes with LLM and caches the result
+4. **Automatic Cleanup**: Expired entries are automatically removed
+
+### Cache Commands
+In the CLI interface, you can use these cache management commands:
+- `cache stats` - View cache statistics and usage
+- `clear cache` - Clear cache entries older than specified hours
+
+### Cache Configuration
+```bash
+# Enable/disable caching
+CACHE_ENABLED=true
+
+# Cache time-to-live in seconds (default: 300 = 5 minutes)
+CACHE_TTL=300
+
+# MongoDB connection settings
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DATABASE=finsight
+MONGODB_CACHE_COLLECTION=query_cache
+```
+
+### Testing the Cache
+Run the cache test script to verify functionality:
+```bash
+python test_cache.py
 ```
 
 ## 🛠️ Installation

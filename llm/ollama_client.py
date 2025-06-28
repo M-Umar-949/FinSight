@@ -73,7 +73,7 @@ Provide a helpful response about financial analysis, market data, or general ass
             
             return {
                 "response": response,
-                "intent": "general",
+                "intent": "general_query",
                 "query_type": "general"
             }
         except Exception as e:
