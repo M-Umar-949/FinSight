@@ -5,6 +5,11 @@ from typing import Dict, Any, Optional, List
 import os
 from dotenv import load_dotenv
 from .prompts import (
+    PRICE_MOVEMENT_ANALYSIS_PROMPT,
+    COMPANY_NEWS_ANALYSIS_PROMPT,
+    REGULATORY_NEWS_ANALYSIS_PROMPT,
+    VIDEO_ANALYSIS_PROMPT,
+    GENERAL_QUERY_PROMPT,
     NEWS_SENTIMENT_ANALYSIS_PROMPT
 )
 
@@ -61,12 +66,8 @@ class OllamaClient:
     def handle_general_query(self, query: str, context: dict = None) -> dict:
         """Handle general queries, greetings, and help requests"""
         try:
-            # Simple prompt without context
-            prompt = f"""You are FinSight, an AI financial analysis assistant. 
-
-User Query: {query}
-
-Provide a helpful response about financial analysis, market data, or general assistance. Be friendly and informative."""
+            # Use the prompt template from prompts.py
+            prompt = GENERAL_QUERY_PROMPT.format(query=query)
             
             # Get response from Ollama
             response = self._get_ollama_response(prompt)
@@ -84,19 +85,14 @@ Provide a helpful response about financial analysis, market data, or general ass
         try:
             # Format market data for prompt
             market_context = self._format_market_data_for_prompt(market_data, news_articles)
+            news_context = self._format_news_articles(news_articles)
             
-            # Create simple prompt without context
-            prompt = f"""You are a financial analyst. Analyze the following price movement query:
-
-Query: {query}
-
-Market Data:
-{market_context}
-
-News Articles:
-{self._format_news_articles(news_articles)}
-
-Provide a comprehensive analysis of the price movement, including key drivers, market sentiment, and potential implications."""
+            # Use the prompt template from prompts.py
+            prompt = PRICE_MOVEMENT_ANALYSIS_PROMPT.format(
+                query=query,
+                market_data=market_context,
+                news_articles=news_context
+            )
             
             # Get response from Ollama
             response = self._get_ollama_response(prompt)
@@ -114,19 +110,14 @@ Provide a comprehensive analysis of the price movement, including key drivers, m
         try:
             # Format news data for prompt
             news_context = self._format_news_data_for_prompt(news_articles, market_data)
+            market_context = self._format_market_data(market_data) if market_data else "No market data available"
             
-            # Create simple prompt without context
-            prompt = f"""You are a financial analyst. Analyze the following company news query:
-
-Query: {query}
-
-News Articles:
-{news_context}
-
-Market Data:
-{self._format_market_data(market_data) if market_data else "No market data available"}
-
-Provide a comprehensive analysis of the company news, including impact on the company, market implications, and key insights."""
+            # Use the prompt template from prompts.py
+            prompt = COMPANY_NEWS_ANALYSIS_PROMPT.format(
+                query=query,
+                news_articles=news_context,
+                market_data=market_context
+            )
             
             # Get response from Ollama
             response = self._get_ollama_response(prompt)
@@ -144,19 +135,14 @@ Provide a comprehensive analysis of the company news, including impact on the co
         try:
             # Format news data for prompt
             news_context = self._format_news_data_for_prompt(news_articles, market_data)
+            market_context = self._format_market_data(market_data) if market_data else "No market data available"
             
-            # Create simple prompt without context
-            prompt = f"""You are a financial analyst. Analyze the following regulatory news query:
-
-Query: {query}
-
-News Articles:
-{news_context}
-
-Market Data:
-{self._format_market_data(market_data) if market_data else "No market data available"}
-
-Provide a comprehensive analysis of the regulatory news, including compliance implications, market impact, and strategic considerations."""
+            # Use the prompt template from prompts.py
+            prompt = REGULATORY_NEWS_ANALYSIS_PROMPT.format(
+                query=query,
+                news_articles=news_context,
+                market_data=market_context
+            )
             
             # Get response from Ollama
             response = self._get_ollama_response(prompt)
@@ -172,18 +158,12 @@ Provide a comprehensive analysis of the regulatory news, including compliance im
     def analyze_video_content(self, query: str, video_content: str, market_context: str, context: dict = None) -> dict:
         """Analyze video content with market context"""
         try:
-            # Create simple prompt without context
-            prompt = f"""You are a financial analyst. Analyze the following video content:
-
-Query: {query}
-
-Video Content:
-{video_content}
-
-Market Context:
-{market_context}
-
-Provide a comprehensive analysis of the video content, including key insights, financial implications, and market relevance."""
+            # Use the prompt template from prompts.py
+            prompt = VIDEO_ANALYSIS_PROMPT.format(
+                query=query,
+                video_content=video_content,
+                market_context=market_context
+            )
             
             # Get response from Ollama
             response = self._get_ollama_response(prompt)
@@ -201,14 +181,8 @@ Provide a comprehensive analysis of the video content, including key insights, f
         try:
             formatted_articles = self._format_news_articles(articles)
             
-            prompt = f"""Analyze the sentiment of the following news articles:
-
-{formatted_articles}
-
-Provide sentiment analysis including:
-- Overall sentiment (positive/negative/neutral)
-- Key sentiment drivers
-- Market impact assessment"""
+            # Use the prompt template from prompts.py
+            prompt = NEWS_SENTIMENT_ANALYSIS_PROMPT.format(articles=formatted_articles)
             
             response = self._get_ollama_response(prompt)
             
