@@ -328,7 +328,7 @@ def main():
     with col2:
         process_button = st.button("🚀 Analyze", type="primary", use_container_width=True)
     
-    st.markdown('</div>', unsafe_allow_html=True)
+    # st.markdown('</div>', unsafe_allow_html=True)
     
     # Process query
     if process_button and query.strip():
