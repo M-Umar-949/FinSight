@@ -13,6 +13,7 @@ class Config:
     MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017')
     MONGODB_DATABASE = os.getenv('MONGODB_DATABASE', 'finsight')
     MONGODB_CACHE_COLLECTION = os.getenv('MONGODB_CACHE_COLLECTION', 'query_cache')
+    MONGODB_VIDEO_COLLECTION = os.getenv('MONGODB_VIDEO_COLLECTION', 'video_transcriptions')
     
     # API Keys for Market Data
     ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', '')

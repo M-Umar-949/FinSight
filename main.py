@@ -4,6 +4,7 @@ from config import Config
 from tools.scraper import get_comprehensive_market_data
 from tools.video_transcriber import VideoTranscriber
 from tools.cache import QueryCache
+from tools.video_cache import VideoCache
 from datetime import datetime
 import re
 from typing import Dict, Any
@@ -14,6 +15,7 @@ class FinSight:
         self.config = Config()
         self.video_transcriber = VideoTranscriber()
         self.cache = QueryCache()
+        self.video_cache = VideoCache()
     
     async def process_query(self, query: str) -> dict:
         """Process a single query with caching"""
@@ -197,7 +199,7 @@ class FinSight:
         return response
     
     async def _handle_video_query(self, query: str) -> dict:
-        """Simple video analysis using YouTube API and Whisper transcription"""
+        """Enhanced video analysis with caching using YouTube API and Whisper transcription"""
         print("🎥 Analyzing video...")
         
         # Extract YouTube URL from query
@@ -209,11 +211,27 @@ class FinSight:
                 "query": query
             }
         
-        # Use the new video analysis with transcription
-        video_result = await self.video_transcriber.analyze_video(url, query)
-        
-        if "error" in video_result:
-            return {"error": f"Video analysis failed: {video_result['error']}"}
+        # Check video cache first
+        cached_video = self.video_cache.get_cached_video(url)
+        if cached_video:
+            print("💾 Using cached video data")
+            video_info = cached_video["video_info"]
+            transcript = cached_video["transcript"]
+            analysis = cached_video["analysis"]
+        else:
+            print("🔄 Processing video (cache miss)")
+            # Use the new video analysis with transcription
+            video_result = await self.video_transcriber.analyze_video(url, query)
+            
+            if "error" in video_result:
+                return {"error": f"Video analysis failed: {video_result['error']}"}
+            
+            video_info = video_result['video_info']
+            transcript = video_result['transcript']
+            analysis = video_result['analysis']
+            
+            # Cache the video data
+            self.video_cache.cache_video_data(url, video_info, transcript, analysis)
         
         # Get market context
         market_data = await get_comprehensive_market_data(query)
@@ -223,7 +241,7 @@ class FinSight:
         print("🧠 Analyzing with AI...")
         analysis_result = self.llm.analyze_video_content(
             query=query,
-            video_content=video_result['transcript']['text'],
+            video_content=transcript['text'],
             market_context=market_context,
             context=None
         )
@@ -236,12 +254,12 @@ class FinSight:
             "intent": "video_analysis",
             "query": query,
             "video_url": url,
-            "video_info": video_result['video_info'],
-            "transcript": video_result['transcript'],
+            "video_info": video_info,
+            "transcript": transcript,
             "analysis": analysis_result["analysis"],
-            "key_insights": video_result['analysis'],
+            "key_insights": analysis,
             "market_context": market_data if "error" not in market_data else None,
-            "timestamp": video_result.get("timestamp")
+            "timestamp": datetime.now().isoformat()
         }
         
         return response
@@ -288,6 +306,8 @@ class FinSight:
         """Cleanup resources"""
         if hasattr(self, 'cache'):
             self.cache.close()
+        if hasattr(self, 'video_cache'):
+            self.video_cache.close()
 
 # CLI Test Interface
 async def main():
@@ -310,7 +330,7 @@ async def main():
             print("  • Regulatory updates: 'What are the latest SEC regulations?'")
             print("  • Video analysis: 'Analyze this video: [YouTube URL]'")
             print("  • General questions: 'Hello', 'How are you?'")
-            print("  • Cache commands: 'cache stats', 'clear cache'")
+            print("  • Cache commands: 'cache stats', 'clear cache', 'video stats', 'clear video cache'")
             print("  • Commands: 'help', 'quit'")
             continue
         elif query.lower() == 'cache stats':
@@ -318,7 +338,7 @@ async def main():
             if "error" in stats:
                 print(f"❌ Cache Error: {stats['error']}")
             else:
-                print("📊 Cache Statistics:")
+                print("📊 Query Cache Statistics:")
                 print(f"  Total entries: {stats['total_entries']}")
                 print(f"  Cache TTL: {stats['cache_ttl_seconds']} seconds")
                 if stats['intent_distribution']:
@@ -330,12 +350,40 @@ async def main():
                 if stats['newest_entry']:
                     print(f"  Newest entry: {stats['newest_entry']}")
             continue
+        elif query.lower() == 'video stats':
+            stats = finsight.video_cache.get_video_stats()
+            if "error" in stats:
+                print(f"❌ Video Cache Error: {stats['error']}")
+            else:
+                print("🎥 Video Cache Statistics:")
+                print(f"  Total videos: {stats['total_videos']}")
+                print(f"  Total transcript length: {stats['total_transcript_length']} characters")
+                print(f"  Total word count: {stats['total_word_count']} words")
+                print(f"  Average duration: {stats['avg_duration']:.1f} seconds")
+                if stats['top_channels']:
+                    print("  Top channels:")
+                    for channel in stats['top_channels']:
+                        print(f"    {channel['_id']}: {channel['count']} videos")
+                if stats['oldest_entry']:
+                    print(f"  Oldest entry: {stats['oldest_entry']}")
+                if stats['newest_entry']:
+                    print(f"  Newest entry: {stats['newest_entry']}")
+            continue
         elif query.lower() == 'clear cache':
             try:
                 hours = input("Enter hours to clear (default 24): ").strip()
                 hours = int(hours) if hours.isdigit() else 24
                 cleared = finsight.cache.clear_cache(hours)
-                print(f"🗑️ Cleared {cleared} cache entries older than {hours} hours")
+                print(f"🗑️ Cleared {cleared} query cache entries older than {hours} hours")
+            except ValueError:
+                print("❌ Invalid input. Please enter a number.")
+            continue
+        elif query.lower() == 'clear video cache':
+            try:
+                hours = input("Enter hours to clear (default 24): ").strip()
+                hours = int(hours) if hours.isdigit() else 24
+                cleared = finsight.video_cache.clear_video_cache(hours)
+                print(f"🗑️ Cleared {cleared} video cache entries older than {hours} hours")
             except ValueError:
                 print("❌ Invalid input. Please enter a number.")
             continue

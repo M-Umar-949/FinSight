@@ -60,6 +60,7 @@ OLLAMA_MODEL=llama2
 MONGODB_URI=mongodb://localhost:27017
 MONGODB_DATABASE=finsight
 MONGODB_CACHE_COLLECTION=query_cache
+MONGODB_VIDEO_COLLECTION=video_transcriptions
 
 # Market Data APIs
 ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
@@ -92,8 +93,10 @@ FinSight includes a robust MongoDB-based caching system that significantly impro
 
 ### Cache Commands
 In the CLI interface, you can use these cache management commands:
-- `cache stats` - View cache statistics and usage
-- `clear cache` - Clear cache entries older than specified hours
+- `cache stats` - View query cache statistics and usage
+- `clear cache` - Clear old query cache entries
+- `video stats` - View video cache statistics and usage
+- `clear video cache` - Clear old video cache entries
 
 ### Cache Configuration
 ```bash
@@ -107,12 +110,43 @@ CACHE_TTL=300
 MONGODB_URI=mongodb://localhost:27017
 MONGODB_DATABASE=finsight
 MONGODB_CACHE_COLLECTION=query_cache
+MONGODB_VIDEO_COLLECTION=video_transcriptions
 ```
+
+### Video Caching System
+FinSight includes a separate caching system for video transcriptions and analysis:
+
+#### Features
+- **Video URL-based caching**: Each unique video URL is cached separately
+- **Transcription storage**: Full video transcripts are stored and reused
+- **Analysis caching**: Video analysis results are cached for quick retrieval
+- **Metadata tracking**: Video title, channel, duration, and view counts
+- **Search functionality**: Search videos by title, channel, or transcript content
+
+#### Benefits
+- **Cost savings**: Avoid re-transcribing the same videos
+- **Performance**: Instant video analysis for previously processed videos
+- **Storage efficiency**: Organized video data with metadata
+- **Search capability**: Find videos by content or metadata
+
+#### Video Cache Statistics
+The system tracks:
+- Total videos processed
+- Total transcript length and word count
+- Average video duration
+- Top channels by video count
+- Cache hit/miss rates
 
 ### Testing the Cache
 Run the cache test script to verify functionality:
 ```bash
 python test_cache.py
+```
+
+### Testing Video Cache
+Run the video cache test script to verify video caching:
+```bash
+python test_video_cache.py
 ```
 
 ## 🛠️ Installation
