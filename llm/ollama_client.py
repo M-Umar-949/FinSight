@@ -277,3 +277,12 @@ class OllamaClient:
                 return f"Error: {response.status_code}"
         except Exception as e:
             return f"Error: {str(e)}"
+    
+    def health_check(self) -> bool:
+        """Check if Ollama is available and responding"""
+        try:
+            url = f"{self.base_url}/api/tags"
+            response = requests.get(url, timeout=5)
+            return response.status_code == 200
+        except Exception:
+            return False

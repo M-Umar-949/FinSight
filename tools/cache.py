@@ -97,26 +97,54 @@ class QueryCache:
             'locations': [],
             'topics': [],
             'time_periods': [],
-            'keywords': []
+            'keywords': [],
+            'actions': [],
+            'numbers': []
         }
         
-        # Extract company symbols (uppercase words, likely tickers)
+        # Enhanced company/ticker detection
         for word in words:
-            if word.isupper() and len(word) <= 5:
+            # Stock tickers (1-5 letters, all caps)
+            if word.isupper() and 1 <= len(word) <= 5 and word.isalpha():
                 entities['companies'].append(word)
-            elif word in ['today', 'yesterday', 'tomorrow', 'week', 'month', 'year']:
+            # Common company names
+            elif word.lower() in ['apple', 'tesla', 'microsoft', 'google', 'amazon', 'facebook', 'meta', 'netflix', 'nvidia', 'amd', 'intel']:
+                entities['companies'].append(word.lower())
+            # Time periods
+            elif word in ['today', 'yesterday', 'tomorrow', 'week', 'month', 'year', 'quarter', 'q1', 'q2', 'q3', 'q4']:
                 entities['time_periods'].append(word)
-            elif word in ['pakistan', 'china', 'usa', 'uk', 'india', 'japan']:
+            # Locations
+            elif word in ['pakistan', 'china', 'usa', 'uk', 'india', 'japan', 'europe', 'asia', 'america']:
                 entities['locations'].append(word)
+            # Numbers and percentages
+            elif re.match(r'^\d+\.?\d*%?$', word):
+                entities['numbers'].append(word)
+            # Actions
+            elif word in ['dropping', 'falling', 'rising', 'up', 'down', 'crash', 'rally', 'surge', 'plunge', 'gain', 'loss']:
+                entities['actions'].append(word)
             else:
                 entities['keywords'].append(word)
         
-        # Extract topics based on financial synonyms
+        # Enhanced topic extraction with synonyms
         for word in words:
             for topic, synonyms in self.financial_synonyms.items():
                 if word in synonyms or word == topic:
                     entities['topics'].append(topic)
                     break
+        
+        # Add common financial topics
+        financial_topics = {
+            'earnings': ['earnings', 'profit', 'revenue', 'income', 'quarterly', 'results'],
+            'crypto': ['crypto', 'bitcoin', 'btc', 'ethereum', 'eth', 'blockchain', 'digital'],
+            'stocks': ['stock', 'shares', 'equity', 'market', 'trading', 'investment'],
+            'regulation': ['regulation', 'regulatory', 'sec', 'cftc', 'compliance', 'legal'],
+            'economy': ['economy', 'economic', 'gdp', 'inflation', 'interest', 'rates'],
+            'forex': ['forex', 'currency', 'dollar', 'euro', 'yen', 'pound']
+        }
+        
+        for topic, keywords in financial_topics.items():
+            if any(keyword in words for keyword in keywords):
+                entities['topics'].append(topic)
         
         return entities
     
@@ -170,29 +198,44 @@ class QueryCache:
                         logger.info(f"🗑️ Expired cache removed for query: {query[:50]}...")
             
             # Try semantic matching if no exact match
-            if entities['keywords']:
-                # Look for similar queries with same intent and key entities
-                similar_queries = self.collection.find({
-                    "intent": intent,
-                    "created_at": {"$gte": datetime.utcnow() - timedelta(seconds=self.config.CACHE_TTL)}
-                })
+            logger.info(f"🔍 Attempting semantic matching for: {query[:50]}...")
+            logger.info(f"   Entities: {entities}")
+            
+            # Look for similar queries with same intent and recent cache entries
+            similar_queries = self.collection.find({
+                "intent": intent,
+                "created_at": {"$gte": datetime.utcnow() - timedelta(seconds=self.config.CACHE_TTL)}
+            })
+            
+            best_match = None
+            best_score = 0
+            match_details = ""
+            
+            for doc in similar_queries:
+                if doc.get('entities'):
+                    # Calculate similarity score
+                    score = self._calculate_similarity(entities, doc['entities'])
+                    
+                    if score > best_score and score >= 0.6:  # Lowered threshold to 60%
+                        best_score = score
+                        best_match = doc
+                        match_details = f"Matched with: {doc.get('original_query', 'Unknown')[:50]}..."
+            
+            if best_match:
+                logger.info(f"✅ Cache hit (semantic match, {best_score:.2f}) for query: {query[:50]}...")
+                logger.info(f"   {match_details}")
                 
-                best_match = None
-                best_score = 0
+                # Add cache hit indicator to response
+                response = best_match.get('response', {})
+                if isinstance(response, dict):
+                    response['cached'] = True
+                    response['cache_similarity'] = best_score
+                    response['original_query'] = best_match.get('original_query', query)
                 
-                for doc in similar_queries:
-                    if doc.get('entities'):
-                        # Calculate similarity score
-                        score = self._calculate_similarity(entities, doc['entities'])
-                        if score > best_score and score >= 0.7:  # 70% similarity threshold
-                            best_score = score
-                            best_match = doc
-                
-                if best_match:
-                    logger.info(f"✅ Cache hit (semantic match, {best_score:.2f}) for query: {query[:50]}...")
-                    return best_match.get('response')
+                return response
             
             logger.info(f"❌ Cache miss for query: {query[:50]}...")
+            logger.info(f"   No similar queries found with score >= 0.6")
             return None
             
         except Exception as e:
@@ -200,23 +243,48 @@ class QueryCache:
             return None
     
     def _calculate_similarity(self, entities1: Dict[str, Any], entities2: Dict[str, Any]) -> float:
-        """Calculate similarity between two entity sets"""
-        total_matches = 0
-        total_entities = 0
+        """Calculate enhanced similarity between two entity sets"""
+        total_score = 0
+        max_possible_score = 0
         
-        for key in ['companies', 'topics', 'locations', 'keywords']:
-            set1 = set(entities1.get(key, []))
-            set2 = set(entities2.get(key, []))
+        # Weight different entity types
+        weights = {
+            'companies': 0.4,    # Companies are most important
+            'topics': 0.3,       # Topics are very important
+            'actions': 0.2,      # Actions (up/down) are important
+            'locations': 0.1,    # Locations are less important
+            'time_periods': 0.1, # Time periods are less important
+            'keywords': 0.05     # General keywords are least important
+        }
+        
+        for entity_type, weight in weights.items():
+            set1 = set(entities1.get(entity_type, []))
+            set2 = set(entities2.get(entity_type, []))
             
             if set1 or set2:  # Only count if at least one set has entities
                 intersection = len(set1.intersection(set2))
                 union = len(set1.union(set2))
                 
                 if union > 0:
-                    total_matches += intersection
-                    total_entities += union
+                    jaccard_similarity = intersection / union
+                    total_score += jaccard_similarity * weight
+                    max_possible_score += weight
         
-        return total_matches / total_entities if total_entities > 0 else 0.0
+        # Bonus for having same number of companies (indicates same focus)
+        companies1 = set(entities1.get('companies', []))
+        companies2 = set(entities2.get('companies', []))
+        if companies1 and companies2 and companies1 == companies2:
+            total_score += 0.1  # Bonus for exact company match
+            max_possible_score += 0.1
+        
+        # Bonus for having same topics
+        topics1 = set(entities1.get('topics', []))
+        topics2 = set(entities2.get('topics', []))
+        if topics1 and topics2 and topics1 == topics2:
+            total_score += 0.05  # Bonus for exact topic match
+            max_possible_score += 0.05
+        
+        return total_score / max_possible_score if max_possible_score > 0 else 0.0
     
     def cache_response(self, query: str, intent: str, response: Dict[str, Any]) -> bool:
         """Cache a response for future use with intelligent matching"""

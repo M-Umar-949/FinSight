@@ -25,7 +25,11 @@ class FinSight:
         intent = self.llm.detect_intent(query)
         print(f"🎯 Detected intent: {intent}")
         
-        # Check cache first
+        # Special handling for video queries - bypass general cache
+        if intent == "video_analysis":
+            return await self._handle_video_query(query)
+        
+        # For non-video queries, check general cache first
         cached_response = self.cache.get_cached_response(query, intent)
         if cached_response:
             print("💾 Returning cached response")
@@ -41,8 +45,6 @@ class FinSight:
             response = await self._handle_company_news_query(query)
         elif intent == "regulatory_news":
             response = await self._handle_regulatory_news_query(query)
-        elif intent == "video_analysis":
-            response = await self._handle_video_query(query)
         elif intent == "general_query":
             response = await self._handle_general_query(query)
         else:
@@ -211,15 +213,17 @@ class FinSight:
                 "query": query
             }
         
-        # Check video cache first
+        print(f"🎬 Video URL: {url}")
+        
+        # Check video cache first (based on URL, not query text)
         cached_video = self.video_cache.get_cached_video(url)
         if cached_video:
-            print("💾 Using cached video data")
+            print("💾 Using cached video data (URL-based cache)")
             video_info = cached_video["video_info"]
             transcript = cached_video["transcript"]
             analysis = cached_video["analysis"]
         else:
-            print("🔄 Processing video (cache miss)")
+            print("🔄 Processing video (video cache miss)")
             # Use the new video analysis with transcription
             video_result = await self.video_transcriber.analyze_video(url, query)
             
@@ -230,7 +234,8 @@ class FinSight:
             transcript = video_result['transcript']
             analysis = video_result['analysis']
             
-            # Cache the video data
+            # Cache the video data (based on URL)
+            print("💾 Caching video data for future use")
             self.video_cache.cache_video_data(url, video_info, transcript, analysis)
         
         # Get market context
@@ -249,7 +254,7 @@ class FinSight:
         if "error" in analysis_result:
             return {"error": f"Analysis failed: {analysis_result['error']}"}
         
-        # Compile response
+        # Compile response (NOT cached in general cache - only video cache)
         response = {
             "intent": "video_analysis",
             "query": query,
