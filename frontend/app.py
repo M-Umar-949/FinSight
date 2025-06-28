@@ -121,6 +121,47 @@ def format_intent_badge(intent: str) -> str:
 
 def display_metrics(result: dict):
     """Display key metrics from the result"""
+    intent = result.get('intent', 'unknown')
+    
+    # For general queries, show different metrics
+    if intent == 'general_query':
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">💬</div>
+                <div class="metric-label">General Query</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">✓</div>
+                <div class="metric-label">Response Ready</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">-</div>
+                <div class="metric-label">Market Data</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            if 'timestamp' in result:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">✓</div>
+                    <div class="metric-label">Analysis Complete</div>
+                </div>
+                """, unsafe_allow_html=True)
+        return
+    
+    # For other intents, show market data metrics
     if 'market_data' in result and result['market_data']:
         market_data = result['market_data']
         
@@ -178,15 +219,26 @@ def display_response(result: dict):
     intent = result.get('intent', 'unknown')
     st.markdown(format_intent_badge(intent), unsafe_allow_html=True)
     
-    # Display main analysis
-    if 'analysis' in result:
-        st.markdown("### 📊 Analysis")
-        # Handle markdown content properly
-        analysis = result['analysis']
-        if isinstance(analysis, str):
-            st.markdown(analysis)
-        else:
-            st.json(analysis)
+    # Display main response/analysis based on intent
+    if intent == 'general_query':
+        # Handle general query responses
+        if 'response' in result:
+            st.markdown("### 💬 Response")
+            response = result['response']
+            if isinstance(response, str):
+                st.markdown(response)
+            else:
+                st.json(response)
+    else:
+        # Handle other intents (price_movement, company_news, etc.)
+        if 'analysis' in result:
+            st.markdown("### 📊 Analysis")
+            # Handle markdown content properly
+            analysis = result['analysis']
+            if isinstance(analysis, str):
+                st.markdown(analysis)
+            else:
+                st.json(analysis)
     
     # Display additional insights
     if 'additional_insights' in result and result['additional_insights']:
@@ -261,7 +313,7 @@ def main():
         """)
     
     # Main content
-    st.markdown('<div class="query-box">', unsafe_allow_html=True)
+    # st.markdown('<div class="query-box">', unsafe_allow_html=True)
     
     # Query input
     query = st.text_area(

@@ -7,17 +7,20 @@ from datetime import datetime, timedelta
 from config import Config
 import asyncio
 
+# Initialize config
+config = Config()
+
 async def fetch_yahoo_finance_news(query: str, limit=None):
     """Enhanced Yahoo Finance news scraper with better data extraction"""
     if limit is None:
-        limit = Config.MAX_NEWS_ARTICLES
+        limit = config.MAX_NEWS_ARTICLES
         
     search_url = f"https://news.search.yahoo.com/search?p={query.replace(' ', '+')}"
     articles = []
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(search_url, timeout=Config.NEWS_FETCH_TIMEOUT) as resp:
+            async with session.get(search_url, timeout=config.NEWS_FETCH_TIMEOUT) as resp:
                 if resp.status != 200:
                     return [{"error": f"Failed to fetch: {resp.status}"}]
                 text = await resp.text()
@@ -51,12 +54,12 @@ async def fetch_yahoo_finance_news(query: str, limit=None):
 
 async def fetch_stock_price_data(symbol: str) -> Dict[str, Any]:
     """Fetch real-time stock price data"""
-    api_key = Config.ALPHA_VANTAGE_API_KEY
+    api_key = config.ALPHA_VANTAGE_API_KEY
     url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}"
     
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=Config.PRICE_DATA_TIMEOUT) as resp:
+            async with session.get(url, timeout=config.PRICE_DATA_TIMEOUT) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     quote = data.get("Global Quote", {})
@@ -84,11 +87,11 @@ async def fetch_market_indicators() -> Dict[str, Any]:
     """Fetch key market indicators"""
     indicators = {}
     
-    for symbol in Config.MARKET_INDICATORS:
+    for symbol in config.MARKET_INDICATORS:
         try:
             async with aiohttp.ClientSession() as session:
-                url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={Config.ALPHA_VANTAGE_API_KEY}"
-                async with session.get(url, timeout=Config.PRICE_DATA_TIMEOUT) as resp:
+                url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={config.ALPHA_VANTAGE_API_KEY}"
+                async with session.get(url, timeout=config.PRICE_DATA_TIMEOUT) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         quote_data = data.get("Global Quote", {})
@@ -123,7 +126,7 @@ def extract_stock_symbols(text: str) -> List[str]:
     common_words = {'THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HAD', 'HER', 'WAS', 'ONE', 'OUR', 'OUT', 'DAY', 'GET', 'HAS', 'HIM', 'HIS', 'HOW', 'MAN', 'NEW', 'NOW', 'OLD', 'SEE', 'TWO', 'WAY', 'WHO', 'BOY', 'DID', 'ITS', 'LET', 'PUT', 'SAY', 'SHE', 'TOO', 'USE'}
     symbols = {s.replace('$', '') for s in symbols if s.replace('$', '') not in common_words}
     
-    return list(symbols)[:Config.MAX_SYMBOLS_ANALYZED]
+    return list(symbols)[:config.MAX_SYMBOLS_ANALYZED]
 
 async def get_comprehensive_market_data(query: str) -> Dict[str, Any]:
     """Get comprehensive market data including news, prices, and indicators"""
@@ -132,11 +135,11 @@ async def get_comprehensive_market_data(query: str) -> Dict[str, Any]:
         symbols = extract_stock_symbols(query)
         
         # Fetch news articles
-        news_articles = await fetch_yahoo_finance_news(query, Config.MAX_NEWS_ARTICLES)
+        news_articles = await fetch_yahoo_finance_news(query, config.MAX_NEWS_ARTICLES)
         
         # Check if we have enough news articles for analysis
-        if len([a for a in news_articles if "error" not in a]) < Config.MIN_NEWS_ARTICLES:
-            return {"error": f"Insufficient news articles found. Need at least {Config.MIN_NEWS_ARTICLES}"}
+        if len([a for a in news_articles if "error" not in a]) < config.MIN_NEWS_ARTICLES:
+            return {"error": f"Insufficient news articles found. Need at least {config.MIN_NEWS_ARTICLES}"}
         
         # Fetch market indicators
         market_indicators = await fetch_market_indicators()
@@ -146,7 +149,7 @@ async def get_comprehensive_market_data(query: str) -> Dict[str, Any]:
         for symbol in symbols:
             price_data[symbol] = await fetch_stock_price_data(symbol)
             # Add small delay to respect rate limits
-            await asyncio.sleep(Config.REQUEST_DELAY)
+            await asyncio.sleep(config.REQUEST_DELAY)
         
         return {
             "query": query,

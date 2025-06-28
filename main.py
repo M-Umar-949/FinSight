@@ -5,6 +5,7 @@ from tools.scraper import get_comprehensive_market_data
 from tools.video_transcriber import VideoTranscriber
 from tools.cache import QueryCache
 from tools.video_cache import VideoCache
+from tools.graph_manager import GraphManager
 from datetime import datetime
 import re
 from typing import Dict, Any
@@ -16,9 +17,10 @@ class FinSight:
         self.video_transcriber = VideoTranscriber()
         self.cache = QueryCache()
         self.video_cache = VideoCache()
+        self.graph_manager = GraphManager()
     
     async def process_query(self, query: str) -> dict:
-        """Process a single query with caching"""
+        """Process a single query with caching and graph creation"""
         print(f"🔍 Processing query: {query}")
         
         # Detect intent
@@ -27,32 +29,41 @@ class FinSight:
         
         # Special handling for video queries - bypass general cache
         if intent == "video_analysis":
-            return await self._handle_video_query(query)
-        
-        # For non-video queries, check general cache first
-        cached_response = self.cache.get_cached_response(query, intent)
-        if cached_response:
-            print("💾 Returning cached response")
-            return cached_response
-        
-        # If not in cache, process normally
-        print("🔄 Processing with LLM (cache miss)")
-        
-        # Route to appropriate handler
-        if intent == "price_movement":
-            response = await self._handle_price_query(query)
-        elif intent == "company_news":
-            response = await self._handle_company_news_query(query)
-        elif intent == "regulatory_news":
-            response = await self._handle_regulatory_news_query(query)
-        elif intent == "general_query":
-            response = await self._handle_general_query(query)
+            response = await self._handle_video_query(query)
         else:
-            response = {"error": f"Unknown intent: {intent}"}
+            # For non-video queries, check general cache first
+            cached_response = self.cache.get_cached_response(query, intent)
+            if cached_response:
+                print("💾 Returning cached response")
+                response = cached_response
+            else:
+                # If not in cache, process normally
+                print("🔄 Processing with LLM (cache miss)")
+                
+                # Route to appropriate handler
+                if intent == "price_movement":
+                    response = await self._handle_price_query(query)
+                elif intent == "company_news":
+                    response = await self._handle_company_news_query(query)
+                elif intent == "regulatory_news":
+                    response = await self._handle_regulatory_news_query(query)
+                elif intent == "general_query":
+                    response = await self._handle_general_query(query)
+                else:
+                    response = {"error": f"Unknown intent: {intent}"}
+                
+                # Cache the response if successful
+                if "error" not in response:
+                    self.cache.cache_response(query, intent, response)
         
-        # Cache the response if successful
+        # Create graph from response if successful
         if "error" not in response:
-            self.cache.cache_response(query, intent, response)
+            print("📊 Creating Neo4j graph from response...")
+            graph_created = self.graph_manager.create_graph_from_response(query, response)
+            if graph_created:
+                print("✅ Graph created successfully")
+            else:
+                print("⚠️ Graph creation failed or skipped")
         
         return response
     
@@ -313,6 +324,8 @@ class FinSight:
             self.cache.close()
         if hasattr(self, 'video_cache'):
             self.video_cache.close()
+        if hasattr(self, 'graph_manager'):
+            self.graph_manager.close()
 
 # CLI Test Interface
 async def main():
@@ -336,6 +349,7 @@ async def main():
             print("  • Video analysis: 'Analyze this video: [YouTube URL]'")
             print("  • General questions: 'Hello', 'How are you?'")
             print("  • Cache commands: 'cache stats', 'clear cache', 'video stats', 'clear video cache'")
+            print("  • Graph commands: 'graph stats', 'clear graph', 'search [term]'")
             print("  • Commands: 'help', 'quit'")
             continue
         elif query.lower() == 'cache stats':
@@ -391,6 +405,49 @@ async def main():
                 print(f"🗑️ Cleared {cleared} video cache entries older than {hours} hours")
             except ValueError:
                 print("❌ Invalid input. Please enter a number.")
+            continue
+        elif query.lower() == 'graph stats':
+            stats = finsight.graph_manager.get_graph_stats()
+            if "error" in stats:
+                print(f"❌ Graph Error: {stats['error']}")
+            else:
+                print("📊 Neo4j Graph Statistics:")
+                if stats.get('node_counts'):
+                    print("  Node counts:")
+                    for node_type, count in stats['node_counts'].items():
+                        print(f"    {node_type}: {count}")
+                if stats.get('relationship_counts'):
+                    print("  Relationship counts:")
+                    for rel_type, count in stats['relationship_counts'].items():
+                        print(f"    {rel_type}: {count}")
+                if stats.get('recent_queries'):
+                    print("  Recent queries:")
+                    for query_info in stats['recent_queries'][:5]:
+                        print(f"    {query_info['intent']}: {query_info['query'][:50]}...")
+            continue
+        elif query.lower() == 'clear graph':
+            confirm = input("⚠️ This will delete ALL graph data. Type 'yes' to confirm: ")
+            if confirm.lower() == 'yes':
+                cleared = finsight.graph_manager.clear_graph()
+                if cleared:
+                    print("🗑️ Neo4j graph cleared successfully")
+                else:
+                    print("❌ Failed to clear graph")
+            else:
+                print("❌ Graph clearing cancelled")
+            continue
+        elif query.lower().startswith('search '):
+            search_term = query[7:].strip()  # Remove 'search ' prefix
+            if search_term:
+                entities = finsight.graph_manager.search_entities(search_term)
+                if entities:
+                    print(f"🔍 Found {len(entities)} entities matching '{search_term}':")
+                    for entity in entities:
+                        print(f"  📍 {entity['name']} ({entity['category']}) - {entity['created_at']}")
+                else:
+                    print(f"❌ No entities found matching '{search_term}'")
+            else:
+                print("❌ Please provide a search term after 'search '")
             continue
         
         if not query.strip():
